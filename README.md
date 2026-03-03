@@ -42,9 +42,7 @@ python main.py
 
 2. Clique em "Calcular e Registrar" para processar a viagem
 
-3. Use "Ver Histórico" para consultar viagens anteriores
-
-4. Use "Limpar Campos" para resetar o formulário
+3. Use "Limpar Campos" para resetar o formulário
 
 ## Dados salvos
 

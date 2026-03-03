@@ -6,7 +6,6 @@ Sistema desenvolvido em Python com interface CustomTkinter para calcular automat
 
 - Registro de viagens com dados do motorista, setor, destino e veículo
 - Cálculo automático da quilometragem percorrida
-- Histórico de todas as viagens registradas
 - Persistência de dados em arquivo JSON
 - Interface moderna e intuitiva
 

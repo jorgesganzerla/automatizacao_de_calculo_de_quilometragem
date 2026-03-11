@@ -11,7 +11,7 @@ class DatabaseManager:
         self.config = {
             'host': 'localhost',
             'user': 'root',
-            'password': '123456789',  # Altere para sua senha do MySQL
+            'password': '',  # Altere para sua senha do MySQL
             'database': 'sistema_km'
         }
     

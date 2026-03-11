@@ -8,6 +8,7 @@ USE sistema_km;
 -- Criar tabela de viagens
 CREATE TABLE viagens (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    mes_referencia VARCHAR(7) NOT NULL,
     data_hora DATETIME NOT NULL,
     motorista VARCHAR(100) NOT NULL,
     setor VARCHAR(50) NOT NULL,
@@ -23,3 +24,4 @@ CREATE TABLE viagens (
 CREATE INDEX idx_motorista ON viagens(motorista);
 CREATE INDEX idx_data_hora ON viagens(data_hora);
 CREATE INDEX idx_setor ON viagens(setor);
+CREATE INDEX idx_mes_referencia ON viagens(mes_referencia);

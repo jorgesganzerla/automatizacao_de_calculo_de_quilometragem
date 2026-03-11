@@ -12,7 +12,7 @@ class SistemaKilometragem:
         # Criar janela principal
         self.root = ctk.CTk()
         self.root.title("Sistema de Cálculo de Quilometragem")
-        self.root.geometry("600x500")
+        self.root.geometry("600x550")
         
         # Configurar tema da interface
         ctk.set_appearance_mode("dark")
@@ -33,17 +33,20 @@ class SistemaKilometragem:
         main_frame = ctk.CTkFrame(self.root)
         main_frame.pack(pady=10, padx=20, fill="both", expand=True)
         
+        # Criar campo de mês de referência
+        self.mes_entry = self.create_field(main_frame, "Mês de Referência (MM/AAAA):", 0)
+        
         # Criar campos de entrada para dados da viagem
-        self.nome_entry = self.create_field(main_frame, "Nome do Motorista:", 0)
-        self.setor_entry = self.create_field(main_frame, "Setor:", 1)
-        self.destino_entry = self.create_field(main_frame, "Local de Destino:", 2)
-        self.km_saida_entry = self.create_field(main_frame, "KM de Saída:", 3)
-        self.km_chegada_entry = self.create_field(main_frame, "KM de Chegada:", 4)
-        self.modelo_carro_entry = self.create_field(main_frame, "Modelo do Carro:", 5)
+        self.nome_entry = self.create_field(main_frame, "Nome do Motorista:", 1)
+        self.setor_entry = self.create_field(main_frame, "Setor:", 2)
+        self.destino_entry = self.create_field(main_frame, "Local de Destino:", 3)
+        self.km_saida_entry = self.create_field(main_frame, "KM de Saída:", 4)
+        self.km_chegada_entry = self.create_field(main_frame, "KM de Chegada:", 5)
+        self.modelo_carro_entry = self.create_field(main_frame, "Modelo do Carro:", 6)
         
         # Frame para organizar os botões
         btn_frame = ctk.CTkFrame(main_frame)
-        btn_frame.grid(row=6, column=0, columnspan=2, pady=20, sticky="ew")
+        btn_frame.grid(row=7, column=0, columnspan=2, pady=20, sticky="ew")
         
         # Botão para calcular e registrar viagem
         calcular_btn = ctk.CTkButton(btn_frame, text="Calcular e Registrar", 
@@ -54,15 +57,20 @@ class SistemaKilometragem:
         limpar_btn = ctk.CTkButton(btn_frame, text="Limpar Campos", command=self.limpar_campos)
         limpar_btn.pack(side="left", padx=10, pady=10)
         
+        # Botão para excluir viagens
+        excluir_btn = ctk.CTkButton(btn_frame, text="Excluir Viagem", 
+                                   command=self.mostrar_viagens_para_excluir)
+        excluir_btn.pack(side="left", padx=10, pady=10)
+        
         # Botão para gerar relatórios
         relatorio_btn = ctk.CTkButton(btn_frame, text="Gerar Relatórios", 
-                                    command=self.mostrar_relatorios)
+                                    command=self.mostrar_selecao_mes)
         relatorio_btn.pack(side="left", padx=10, pady=10)
         
         # Label para exibir mensagens de resultado
         self.resultado_label = ctk.CTkLabel(main_frame, text="", 
                                           font=ctk.CTkFont(size=14, weight="bold"))
-        self.resultado_label.grid(row=7, column=0, columnspan=2, pady=10)
+        self.resultado_label.grid(row=8, column=0, columnspan=2, pady=10)
         
     def create_field(self, parent, label_text, row):
         """Cria um campo de entrada com label
@@ -92,6 +100,7 @@ class SistemaKilometragem:
         """Valida os dados, calcula a quilometragem e registra a viagem no banco"""
         try:
             # Obter e validar dados dos campos
+            mes_referencia = self.mes_entry.get().strip()
             nome = self.nome_entry.get().strip()
             setor = self.setor_entry.get().strip()
             destino = self.destino_entry.get().strip()
@@ -100,8 +109,14 @@ class SistemaKilometragem:
             modelo_carro = self.modelo_carro_entry.get().strip()
             
             # Verificar se todos os campos foram preenchidos
-            if not all([nome, setor, destino, modelo_carro]):
+            if not all([mes_referencia, nome, setor, destino, modelo_carro]):
                 self.resultado_label.configure(text="Por favor, preencha todos os campos!", 
+                                             text_color="red")
+                return
+            
+            # Validar formato do mês (MM/AAAA)
+            if len(mes_referencia) != 7 or mes_referencia[2] != '/':
+                self.resultado_label.configure(text="Formato de mês inválido! Use MM/AAAA", 
                                              text_color="red")
                 return
             
@@ -115,7 +130,7 @@ class SistemaKilometragem:
             km_percorrida = km_chegada - km_saida
             
             # Registrar viagem no banco de dados
-            km_percorrida = self.db.inserir_viagem(nome, setor, destino, km_saida, km_chegada, modelo_carro)
+            km_percorrida = self.db.inserir_viagem(mes_referencia, nome, setor, destino, km_saida, km_chegada, modelo_carro)
             
             # Exibir mensagem de sucesso
             self.resultado_label.configure(
@@ -130,6 +145,7 @@ class SistemaKilometragem:
     
     def limpar_campos(self):
         """Limpa todos os campos de entrada e mensagens de resultado"""
+        self.mes_entry.delete(0, 'end')
         self.nome_entry.delete(0, 'end')
         self.setor_entry.delete(0, 'end')
         self.destino_entry.delete(0, 'end')
@@ -138,53 +154,144 @@ class SistemaKilometragem:
         self.modelo_carro_entry.delete(0, 'end')
         self.resultado_label.configure(text="")
     
-    def mostrar_relatorios(self):
-        """Exibe janela de seleção de modelo de carro para gerar relatórios"""
-        # Obter lista de modelos cadastrados
-        modelos = self.db.obter_modelos_carros()
+    def mostrar_viagens_para_excluir(self):
+        """Exibe janela com lista de viagens para exclusão"""
+        # Obter todas as viagens
+        viagens = self.db.obter_todas_viagens()
+        if not viagens:
+            self.resultado_label.configure(text="Nenhuma viagem registrada!", text_color="orange")
+            return
+        
+        # Criar janela de exclusão
+        excluir_window = ctk.CTkToplevel(self.root)
+        excluir_window.title("Excluir Viagem")
+        excluir_window.geometry("900x500")
+        
+        # Título
+        title = ctk.CTkLabel(excluir_window, text="Selecione a viagem para excluir", 
+                           font=ctk.CTkFont(size=16, weight="bold"))
+        title.pack(pady=20)
+        
+        # Frame scrollable para lista de viagens
+        scrollable_frame = ctk.CTkScrollableFrame(excluir_window)
+        scrollable_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Listar viagens com botão de exclusão
+        for viagem in viagens:
+            viagem_frame = ctk.CTkFrame(scrollable_frame)
+            viagem_frame.pack(fill="x", pady=5, padx=10)
+            
+            # Informações da viagem
+            info_text = (f"ID: {viagem['id']} | Mês: {viagem['mes_referencia']} | {viagem['data']} | "
+                        f"{viagem['motorista']} ({viagem['setor']}) | Destino: {viagem['destino']} | "
+                        f"{viagem['modelo_carro']} | KM: {viagem['km_saida']:.1f} → {viagem['km_chegada']:.1f} "
+                        f"(Percorrida: {viagem['km_percorrida']:.1f} km)")
+            
+            info_label = ctk.CTkLabel(viagem_frame, text=info_text, wraplength=750)
+            info_label.pack(side="left", pady=10, padx=10)
+            
+            # Botão de exclusão
+            excluir_btn = ctk.CTkButton(viagem_frame, text="Excluir", width=80,
+                                       command=lambda v_id=viagem['id'], w=excluir_window: self.excluir_viagem(v_id, w))
+            excluir_btn.pack(side="right", padx=10)
+    
+    def excluir_viagem(self, viagem_id, window):
+        """Exclui uma viagem do banco de dados
+        
+        Args:
+            viagem_id: ID da viagem a ser excluída
+            window: Janela a ser fechada após exclusão
+        """
+        # Confirmar exclusão
+        if self.db.excluir_viagem(viagem_id):
+            self.resultado_label.configure(text="Viagem excluída com sucesso!", text_color="green")
+            window.destroy()
+        else:
+            self.resultado_label.configure(text="Erro ao excluir viagem!", text_color="red")
+    
+    def mostrar_selecao_mes(self):
+        """Exibe janela de seleção de mês para relatórios"""
+        # Obter meses disponíveis
+        meses = self.db.obter_meses_disponiveis()
+        if not meses:
+            self.resultado_label.configure(text="Nenhum mês com registros encontrado!", text_color="orange")
+            return
+        
+        # Criar janela de seleção de mês
+        mes_window = ctk.CTkToplevel(self.root)
+        mes_window.title("Selecionar Mês")
+        mes_window.geometry("400x400")
+        
+        # Título
+        title = ctk.CTkLabel(mes_window, text="Selecione o Mês de Referência", 
+                           font=ctk.CTkFont(size=16, weight="bold"))
+        title.pack(pady=20)
+        
+        # Frame scrollable para lista de meses
+        buttons_frame = ctk.CTkScrollableFrame(mes_window)
+        buttons_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Botão para cada mês
+        for mes in meses:
+            btn = ctk.CTkButton(buttons_frame, text=mes, 
+                              command=lambda m=mes: self.mostrar_modelos_por_mes(m, mes_window))
+            btn.pack(pady=5, fill="x")
+    
+    def mostrar_modelos_por_mes(self, mes_referencia, parent_window):
+        """Exibe janela de seleção de modelo de carro filtrado por mês
+        
+        Args:
+            mes_referencia: Mês selecionado
+            parent_window: Janela pai a ser fechada
+        """
+        parent_window.destroy()
+        
+        # Obter modelos do mês selecionado
+        modelos = self.db.obter_modelos_carros(mes_referencia)
         if not modelos:
-            self.resultado_label.configure(text="Nenhum modelo de carro encontrado!", text_color="orange")
+            self.resultado_label.configure(text=f"Nenhum modelo encontrado para {mes_referencia}!", text_color="orange")
             return
         
         # Criar janela de seleção de modelo
-        relatorio_window = ctk.CTkToplevel(self.root)
-        relatorio_window.title("Gerar Relatórios")
-        relatorio_window.geometry("400x300")
+        modelo_window = ctk.CTkToplevel(self.root)
+        modelo_window.title(f"Modelos - {mes_referencia}")
+        modelo_window.geometry("400x400")
         
-        # Título da janela
-        title = ctk.CTkLabel(relatorio_window, text="Selecione o Modelo do Carro", 
+        # Título
+        title = ctk.CTkLabel(modelo_window, text=f"Selecione o Modelo do Carro\nMês: {mes_referencia}", 
                            font=ctk.CTkFont(size=16, weight="bold"))
         title.pack(pady=20)
         
         # Frame scrollable para lista de modelos
-        buttons_frame = ctk.CTkScrollableFrame(relatorio_window)
+        buttons_frame = ctk.CTkScrollableFrame(modelo_window)
         buttons_frame.pack(fill="both", expand=True, padx=20, pady=20)
         
-        # Criar botão para cada modelo de carro
+        # Botão para cada modelo
         for modelo in modelos:
             btn = ctk.CTkButton(buttons_frame, text=modelo, 
-                              command=lambda m=modelo: self.mostrar_relatorio_modelo(m, relatorio_window))
+                              command=lambda m=modelo: self.mostrar_relatorio_modelo(m, mes_referencia, modelo_window))
             btn.pack(pady=5, fill="x")
     
-    def mostrar_relatorio_modelo(self, modelo, parent_window):
+    def mostrar_relatorio_modelo(self, modelo, mes_referencia, parent_window):
         """Exibe relatório detalhado de quilometragem por setor para um modelo específico
         
         Args:
             modelo: Modelo do carro selecionado
+            mes_referencia: Mês de referência
             parent_window: Janela pai a ser fechada
         """
         # Fechar janela de seleção
         parent_window.destroy()
         
         # Obter dados do relatório
-        relatorio = self.db.obter_relatorio_por_modelo(modelo)
+        relatorio = self.db.obter_relatorio_por_modelo(modelo, mes_referencia)
         if not relatorio:
-            self.resultado_label.configure(text=f"Nenhum dado encontrado para {modelo}!", text_color="orange")
+            self.resultado_label.configure(text=f"Nenhum dado encontrado para {modelo} em {mes_referencia}!", text_color="orange")
             return
         
         # Criar janela do relatório
         relatorio_window = ctk.CTkToplevel(self.root)
-        relatorio_window.title(f"Relatório - {modelo}")
+        relatorio_window.title(f"Relatório - {modelo} - {mes_referencia}")
         relatorio_window.geometry("600x400")
         
         # Frame scrollable para o relatório
@@ -192,7 +299,7 @@ class SistemaKilometragem:
         scrollable_frame.pack(fill="both", expand=True, padx=20, pady=20)
         
         # Título do relatório
-        header = ctk.CTkLabel(scrollable_frame, text=f"RELATÓRIO DE QUILOMETRAGEM - {modelo}", 
+        header = ctk.CTkLabel(scrollable_frame, text=f"RELATÓRIO DE QUILOMETRAGEM\n{modelo} - {mes_referencia}", 
                             font=ctk.CTkFont(size=16, weight="bold"))
         header.pack(pady=10)
         
